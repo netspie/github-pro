@@ -1,4 +1,4 @@
-package com.netspie.githubpro.repositories
+package com.netspie.githubpro.features.repositories
 
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping
@@ -12,5 +12,6 @@ class RepositoriesController(
     @GetMapping
     fun getAll(username: String) =
         getAllUserRepositoriesQueryHandler.execute(
-            GetAllUserRepositoriesQuery(username))
+            GetAllUserRepositoriesQuery(username)
+        )
 }
