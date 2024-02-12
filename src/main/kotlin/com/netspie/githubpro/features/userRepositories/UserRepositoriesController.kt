@@ -1,6 +1,8 @@
 package com.netspie.githubpro.features.userRepositories
 
 import com.netspie.githubpro.features.shared.ResultT
+import org.springframework.http.HttpStatusCode
+import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestMapping
@@ -14,7 +16,7 @@ class UserRepositoriesController(
     @GetMapping
     fun getAllWithToken(
         @RequestHeader("Authorization", required = false) authorizationToken: String?,
-        username: String) =
+        username: String) : ResponseEntity<Any> =
         getAllUserRepositoriesQueryHandler.execute(
             GetAllUserRepositoriesQuery(username, authorizationToken)
         ).toApiResponse()
@@ -26,13 +28,14 @@ data class ApiError(
     val message: String
 )
 
-fun<T> ResultT<T>.toApiResponse(): Any? {
+fun<T> ResultT<T>.toApiResponse(): ResponseEntity<Any> {
     if (!this.isSuccess) {
         val message = this.messages.joinToString(separator = ". ") { it.content }
-        val errorCode = message.takeWhile { it != ' ' }.toIntOrNull()
+        val errorCode = message.takeWhile { it != ' ' }.toIntOrNull() ?: 404
 
-        return ApiError(errorCode ?: 404, message)
+        return ResponseEntity(
+            ApiError(errorCode, message), HttpStatusCode.valueOf(errorCode))
     }
 
-    return this.value
+    return ResponseEntity.ok(this.value)
 }
