@@ -7,7 +7,7 @@ API for more concise formatting of Github API
 
 ## API
 
-Each endpoint might require an access token to perform requests successfully in case the limit count of daily requests was exceeded, otherwise it will return 403 error response.
+Each endpoint might require an access token to perform requests successfully in case the rate limit exceeded, otherwise it will return 403 error response. [More Info](https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api?apiVersion=2022-11-28).
 
 **Endpoints**
 <br>  
@@ -20,7 +20,7 @@ Each endpoint might require an access token to perform requests successfully in 
 
 ### Responses  
 
-The API normally returns JSON in the response body. In case of some errors it will return HTTP status code (500, 403, 404). The response body JSON might be is a unique object if it's a GET request, and/or it might be an error object depending on the request was successfully processed.
+The API normally returns JSON in the response body. In case of some errors it will return HTTP status code (500, 403, 404). The response body with JSON might be is a unique object if it's a GET request or an error object if the request was not successfully processed.
 
 &nbsp;&nbsp;&nbsp;&nbsp; *Result Fields*
 
@@ -32,10 +32,10 @@ The API normally returns JSON in the response body. In case of some errors it wi
       
 *Example:*
 ```
-HTTP/1.1 400 Bad Request
+HTTP/1.1 403 Forbidden
 {
     "status": 403,
-    "message": "Daily unauthorized requests count limit has exceeded",
+    "message": "403 rate limit exceeded",
 }
 ```
 
