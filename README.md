@@ -52,7 +52,7 @@ Get repositories for a specific user which are not forks.
 #### Success Response
 
 ##### *200*
-&nbsp;&nbsp;&nbsp;&nbsp; Object containing a repositories array
+&nbsp;&nbsp;&nbsp;&nbsp; Object containing repositories array
 
 &nbsp;&nbsp;&nbsp;&nbsp; *Fields*
 - object
