@@ -2,44 +2,57 @@ package com.netspie.githubpro.features.userRepositories
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.netspie.githubpro.features.shared.HttpClient
+import com.netspie.githubpro.features.shared.ResultT
+import com.netspie.githubpro.features.shared.resultActionOfT
 import org.springframework.stereotype.Service
 
 const val GithubUrl = "https://api.github.com"
 
 @Service
 class GetAllUserRepositoriesQueryHandler{
-    fun execute(query: GetAllUserRepositoriesQuery): GetAllUserRepositoriesQueryResponse? {
-        if (query.username.isEmpty())
-            return null
+    fun execute(query: GetAllUserRepositoriesQuery): ResultT<GetAllUserRepositoriesQueryResponse> =
+        resultActionOfT { result ->
+            if (query.username.isEmpty())
+                result.fail("Username cannot be empty") && return@resultActionOfT null
 
-        val client = HttpClient(query.authorizationToken)
+            val client = HttpClient(query.authorizationToken)
+            val urls = client.get<GithubUrlsDTO>(GithubUrl) ?: return@resultActionOfT null
 
-        val urls = client.get<GithubUrlsDTO>(GithubUrl) ?: return null
+            val url = urls.userRepositoriesUrl
+                .replace("{user}", query.username)
+                .removeSuffix("{?type,page,per_page,sort}")
 
-        val url = urls.userRepositoriesUrl
-            .replace("{user}", query.username)
-            .removeSuffix("{?type,page,per_page,sort}")
+            val repositories = runCatching {
+                client.get<Array<GithubRepositoryDTO>>(url)
+            }.getOrElse {
+                result.fail(it.message ?: "Error occurred")
+                null
+            }
 
-        val repositories = client.get<Array<GithubRepositoryDTO>>(url) ?: return null
+            if (repositories == null || !result.isSuccess)
+                return@resultActionOfT null
 
-        return GetAllUserRepositoriesQueryResponse(
-            repositories
-                .filter { !it.fork }
-                .map { repo ->
-                    GetAllUserRepositoriesQueryResponse.RepositoryDTO(
-                        repo.fullName,
-                        repo.owner.login,
-                        branches = getBranches(client, repo.branchesUrl).let {
-                            it ?: return@execute null
-                        }
-                    )
-                }
+            GetAllUserRepositoriesQueryResponse(
+                repositories
+                    .filter { !it.fork }
+                    .map { repo ->
+                        GetAllUserRepositoriesQueryResponse.RepositoryDTO(
+                            repo.fullName,
+                            repo.owner.login,
+                            branches = getBranches(client, repo.branchesUrl).let {
+                                it ?: return@resultActionOfT null
+                            }
+                        )
+                    }
             )
-    }
+        }
 
     private fun getBranches(client: HttpClient, branchesUrl: String): List<GetAllUserRepositoriesQueryResponse.BranchDTO>? {
-        val branches = client.get<Array<GithubBranchDTO>>(
-            branchesUrl.removeSuffix("{/branch}")) ?: return null
+        val branches = runCatching {
+            client.get<Array<GithubBranchDTO>>(branchesUrl.removeSuffix("{/branch}"))
+        }.getOrElse {
+            null
+        } ?: return null
 
         return branches.map {
             branch ->
