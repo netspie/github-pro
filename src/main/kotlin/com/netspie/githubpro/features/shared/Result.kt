@@ -45,6 +45,11 @@ class ResultOf<T>(messages: MutableList<Message>) : Result(messages) {}
 
 fun failure(message: String) = Result(mutableListOf(Message(MessageLevel.error, message)))
 fun success() = Result()
+fun<T> failure(message: String): ResultT<T> {
+    val result = ResultT<T>(null)
+    result.fail(message)
+    return result
+}
 
 fun Result.addTo(other: Result): Result {
     other.add(this)

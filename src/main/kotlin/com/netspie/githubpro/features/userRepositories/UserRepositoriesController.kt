@@ -27,8 +27,12 @@ data class ApiError(
 )
 
 fun<T> ResultT<T>.toApiResponse(): Any? {
-    if (!this.isSuccess)
-        return ApiError(404, this.messages.joinToString(separator = ". ") { it.content })
+    if (!this.isSuccess) {
+        val message = this.messages.joinToString(separator = ". ") { it.content }
+        val errorCode = message.takeWhile { it != ' ' }.toIntOrNull()
+
+        return ApiError(errorCode ?: 404, message)
+    }
 
     return this.value
 }

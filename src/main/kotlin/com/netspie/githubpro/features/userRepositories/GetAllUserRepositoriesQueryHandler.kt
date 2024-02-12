@@ -3,6 +3,7 @@ package com.netspie.githubpro.features.userRepositories
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.netspie.githubpro.features.shared.HttpClient
 import com.netspie.githubpro.features.shared.ResultT
+import com.netspie.githubpro.features.shared.Result
 import com.netspie.githubpro.features.shared.resultActionOfT
 import org.springframework.stereotype.Service
 
@@ -16,21 +17,13 @@ class GetAllUserRepositoriesQueryHandler{
                 result.fail("Username cannot be empty") && return@resultActionOfT null
 
             val client = HttpClient(query.authorizationToken)
-            val urls = client.get<GithubUrlsDTO>(GithubUrl) ?: return@resultActionOfT null
 
+            val urls = client.getResult<GithubUrlsDTO>(GithubUrl, result) ?: return@resultActionOfT null
             val url = urls.userRepositoriesUrl
                 .replace("{user}", query.username)
                 .removeSuffix("{?type,page,per_page,sort}")
 
-            val repositories = runCatching {
-                client.get<Array<GithubRepositoryDTO>>(url)
-            }.getOrElse {
-                result.fail(it.message ?: "Error occurred")
-                null
-            }
-
-            if (repositories == null || !result.isSuccess)
-                return@resultActionOfT null
+            val repositories = client.getResult<Array<GithubRepositoryDTO>>(url, result) ?: return@resultActionOfT null
 
             GetAllUserRepositoriesQueryResponse(
                 repositories
@@ -39,7 +32,7 @@ class GetAllUserRepositoriesQueryHandler{
                         GetAllUserRepositoriesQueryResponse.RepositoryDTO(
                             repo.fullName,
                             repo.owner.login,
-                            branches = getBranches(client, repo.branchesUrl).let {
+                            branches = getBranches(client, repo.branchesUrl, result).let {
                                 it ?: return@resultActionOfT null
                             }
                         )
@@ -47,12 +40,9 @@ class GetAllUserRepositoriesQueryHandler{
             )
         }
 
-    private fun getBranches(client: HttpClient, branchesUrl: String): List<GetAllUserRepositoriesQueryResponse.BranchDTO>? {
-        val branches = runCatching {
-            client.get<Array<GithubBranchDTO>>(branchesUrl.removeSuffix("{/branch}"))
-        }.getOrElse {
-            null
-        } ?: return null
+    private fun getBranches(client: HttpClient, branchesUrl: String, result: Result): List<GetAllUserRepositoriesQueryResponse.BranchDTO>? {
+        val branches = client.getResult<Array<GithubBranchDTO>>(
+            branchesUrl.removeSuffix("{/branch}"), result) ?: return null
 
         return branches.map {
             branch ->
@@ -93,3 +83,10 @@ class GetAllUserRepositoriesQueryHandler{
     )
 }
 
+inline fun<reified TResponse> HttpClient.getResult(url: String, result: Result): TResponse? =
+    runCatching {
+        this.get<TResponse>(url)
+    }.getOrElse {
+        result.fail(it.message ?: "Error occurred")
+        null
+    }
